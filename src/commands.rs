@@ -1,6 +1,7 @@
 use tauri::{command, AppHandle, Runtime};
 use tokio::sync::mpsc;
 
+use crate::backend::{InferenceInput, InferenceOutput};
 use crate::config::{CompletionRequest, CompletionResponse, ModelConfig};
 use crate::error::Error;
 use crate::models::{AiState, ModelInfo};
@@ -82,4 +83,35 @@ pub async fn get_providers(
 ) -> Result<Vec<String>, Error> {
     let registry = state.0.lock().await;
     Ok(registry.list_providers())
+}
+
+/// Run inference on a loaded model (non-LLM).
+///
+/// This is the generic inference API for any model type:
+/// image classifiers, embedding models, audio processors, etc.
+/// For LLM chat, use `complete` or `stream` instead.
+#[command]
+pub async fn infer(
+    state: tauri::State<'_, AiState>,
+    backend: String,
+    model: String,
+    input: InferenceInput,
+) -> Result<InferenceOutput, Error> {
+    let registry = state.0.lock().await;
+    registry.infer(&backend, &model, input)
+}
+
+/// List available inference backends and their loaded models.
+#[command]
+pub async fn list_backends(
+    state: tauri::State<'_, AiState>,
+) -> Result<Vec<BackendInfo>, Error> {
+    let registry = state.0.lock().await;
+    Ok(registry.list_backends())
+}
+
+#[derive(serde::Serialize)]
+pub struct BackendInfo {
+    pub name: String,
+    pub loaded_models: Vec<String>,
 }

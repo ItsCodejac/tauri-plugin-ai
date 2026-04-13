@@ -7,6 +7,8 @@ fn main() {
         "unload_model",
         "set_api_key",
         "get_providers",
+        "infer",
+        "list_backends",
     ])
     .build();
 }

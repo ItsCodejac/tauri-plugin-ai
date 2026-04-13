@@ -31,13 +31,18 @@ use models::{AiState, ModelRegistry};
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::<R, ()>::new("ai")
         .invoke_handler(tauri::generate_handler![
+            // Chat/Completion (LLMs)
             commands::complete,
             commands::stream,
+            // Model management
             commands::list_models,
             commands::load_model,
             commands::unload_model,
             commands::set_api_key,
             commands::get_providers,
+            // General inference (non-LLM models)
+            commands::infer,
+            commands::list_backends,
         ])
         .setup(|app, _api| {
             let mut registry = ModelRegistry::new();

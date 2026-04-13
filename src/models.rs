@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::backend::InferenceBackend;
+use crate::backend::{InferenceBackend, InferenceInput, InferenceOutput};
 use crate::config::{CompletionRequest, CompletionResponse, ModelConfig, StreamChunk};
 use crate::error::{Error, Result};
 use crate::provider::Provider;
@@ -137,6 +137,34 @@ impl ModelRegistry {
             .get_mut(backend_name)
             .ok_or_else(|| Error::Config(format!("Backend '{}' not registered", backend_name)))?;
         backend.unload_model(model_name)
+    }
+
+    /// Run inference on a loaded model (non-LLM).
+    pub fn infer(
+        &self,
+        backend_name: &str,
+        model_name: &str,
+        input: InferenceInput,
+    ) -> Result<InferenceOutput> {
+        let backend = self
+            .backends
+            .get(backend_name)
+            .ok_or_else(|| Error::Config(format!("Backend '{}' not registered", backend_name)))?;
+        if !backend.is_loaded(model_name) {
+            return Err(Error::ModelNotLoaded(model_name.to_string()));
+        }
+        backend.infer(model_name, input)
+    }
+
+    /// List all backends and their loaded models.
+    pub fn list_backends(&self) -> Vec<crate::commands::BackendInfo> {
+        self.backends
+            .iter()
+            .map(|(name, backend)| crate::commands::BackendInfo {
+                name: name.clone(),
+                loaded_models: backend.loaded_models(),
+            })
+            .collect()
     }
 }
 

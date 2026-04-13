@@ -216,18 +216,113 @@ export async function getProviders(): Promise<string[]> {
 }
 
 // ---------------------------------------------------------------------------
+// General inference (non-LLM models)
+// ---------------------------------------------------------------------------
+
+/** Tensor data for model input/output. */
+export interface TensorData {
+  /** Shape (e.g. [1, 3, 224, 224]) */
+  shape: number[];
+  /** Data type: "f32", "f16", "i32", "u8", etc. */
+  dtype: string;
+  /** Raw data as byte array */
+  data: number[];
+}
+
+/** Input for general model inference. */
+export interface InferenceInput {
+  /** Named tensor inputs (model-specific, e.g. "pixel_values", "input_ids") */
+  tensors: Record<string, TensorData>;
+  /** Optional model-specific parameters */
+  params?: Record<string, unknown>;
+}
+
+/** Output from general model inference. */
+export interface InferenceOutput {
+  /** Named tensor outputs (model-specific, e.g. "logits", "embeddings") */
+  tensors: Record<string, TensorData>;
+  /** Optional metadata (timing, model info) */
+  metadata?: Record<string, unknown>;
+}
+
+/** Backend info (name + loaded models). */
+export interface BackendInfo {
+  name: string;
+  loaded_models: string[];
+}
+
+/**
+ * Run inference on a loaded model.
+ *
+ * This is the generic inference API for any model type:
+ * image classifiers, embedding models, audio processors, etc.
+ * For LLM chat, use `complete()` or `AIStream` instead.
+ */
+export async function infer(
+  backend: string,
+  model: string,
+  input: InferenceInput,
+): Promise<InferenceOutput> {
+  return invoke<InferenceOutput>('plugin:ai|infer', { backend, model, input });
+}
+
+/** List all inference backends and their loaded models. */
+export async function listBackends(): Promise<BackendInfo[]> {
+  return invoke<BackendInfo[]>('plugin:ai|list_backends');
+}
+
+// ---------------------------------------------------------------------------
+// Tensor helpers
+// ---------------------------------------------------------------------------
+
+/** Create a TensorData from a Float32Array. */
+export function tensorFromFloat32(data: Float32Array, shape: number[]): TensorData {
+  return {
+    shape,
+    dtype: 'f32',
+    data: Array.from(new Uint8Array(data.buffer)),
+  };
+}
+
+/** Create a TensorData from a Uint8Array (e.g. image bytes). */
+export function tensorFromUint8(data: Uint8Array, shape: number[]): TensorData {
+  return {
+    shape,
+    dtype: 'u8',
+    data: Array.from(data),
+  };
+}
+
+/** Extract a Float32Array from a TensorData output. */
+export function tensorToFloat32(tensor: TensorData): Float32Array {
+  return new Float32Array(new Uint8Array(tensor.data).buffer);
+}
+
+// ---------------------------------------------------------------------------
 // Convenience namespace export
 // ---------------------------------------------------------------------------
 
 export const ai = {
+  // Chat/Completion (LLMs)
   complete,
   streamToString,
+  AIStream,
+
+  // Model management
   listModels,
   loadModel,
   unloadModel,
   setApiKey,
   getProviders,
-  AIStream,
+
+  // General inference (any model)
+  infer,
+  listBackends,
+
+  // Tensor helpers
+  tensorFromFloat32,
+  tensorFromUint8,
+  tensorToFloat32,
 } as const;
 
 export default ai;
