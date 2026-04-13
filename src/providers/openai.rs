@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde_json::json;
 use tokio::sync::mpsc;
 
-use crate::config::{CompletionRequest, CompletionResponse, StreamChunk, Usage};
+use crate::config::{
+    CompletionRequest, CompletionResponse, Content, ContentPart, StreamChunk, Usage,
+};
 use crate::error::{Error, Result};
 use crate::provider::Provider;
 
@@ -31,9 +35,30 @@ impl OpenAiProvider {
             .messages
             .iter()
             .map(|m| {
+                let content_value = match &m.content {
+                    Content::Text(s) => json!(s),
+                    Content::Parts(parts) => {
+                        let blocks: Vec<serde_json::Value> = parts
+                            .iter()
+                            .map(|p| match p {
+                                ContentPart::Text { text } => json!({
+                                    "type": "text",
+                                    "text": text,
+                                }),
+                                ContentPart::Image { data, media_type } => json!({
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": format!("data:{};base64,{}", media_type, data),
+                                    },
+                                }),
+                            })
+                            .collect();
+                        json!(blocks)
+                    }
+                };
                 json!({
                     "role": m.role,
-                    "content": m.content,
+                    "content": content_value,
                 })
             })
             .collect();
@@ -71,6 +96,7 @@ impl Provider for OpenAiProvider {
         request: CompletionRequest,
         api_key: &str,
     ) -> Result<CompletionResponse> {
+        let timeout = Duration::from_secs(request.timeout_secs.unwrap_or(60) as u64);
         let body = self.build_body(&request, false);
 
         let resp = self
@@ -78,6 +104,7 @@ impl Provider for OpenAiProvider {
             .post(format!("{}/v1/chat/completions", self.api_base))
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
+            .timeout(timeout)
             .json(&body)
             .send()
             .await
@@ -140,6 +167,7 @@ impl Provider for OpenAiProvider {
         api_key: &str,
         sender: mpsc::Sender<StreamChunk>,
     ) -> Result<()> {
+        let timeout = Duration::from_secs(request.timeout_secs.unwrap_or(120) as u64);
         let body = self.build_body(&request, true);
 
         let resp = self
@@ -147,6 +175,7 @@ impl Provider for OpenAiProvider {
             .post(format!("{}/v1/chat/completions", self.api_base))
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
+            .timeout(timeout)
             .json(&body)
             .send()
             .await
@@ -163,6 +192,8 @@ impl Provider for OpenAiProvider {
 
         let mut buffer = String::new();
         let mut bytes_stream = resp.bytes_stream();
+        // Track the finish_reason from the last chunk before [DONE]
+        let mut pending_finish_reason: Option<String> = None;
 
         while let Some(chunk_result) = bytes_stream.next().await {
             let chunk_bytes = chunk_result.map_err(|e| Error::Streaming(e.to_string()))?;
@@ -180,6 +211,7 @@ impl Provider for OpenAiProvider {
                                     delta: String::new(),
                                     done: true,
                                     usage: None,
+                                    finish_reason: pending_finish_reason.take(),
                                 })
                                 .await;
                             return Ok(());
@@ -193,14 +225,31 @@ impl Provider for OpenAiProvider {
                                 .unwrap_or("")
                                 .to_string();
 
+                            // Capture finish_reason even when delta is empty
+                            let finish_reason = parsed["choices"]
+                                .as_array()
+                                .and_then(|arr| arr.first())
+                                .and_then(|c| c["finish_reason"].as_str())
+                                .map(|s| s.to_string());
+
+                            if let Some(fr) = finish_reason {
+                                pending_finish_reason = Some(fr);
+                            }
+
                             if !delta.is_empty() {
-                                let _ = sender
+                                if sender
                                     .send(StreamChunk {
                                         delta,
                                         done: false,
                                         usage: None,
+                                        finish_reason: None,
                                     })
-                                    .await;
+                                    .await
+                                    .is_err()
+                                {
+                                    // Receiver dropped (cancelled), stop streaming
+                                    return Ok(());
+                                }
                             }
                         }
                     }

@@ -45,6 +45,15 @@ impl ModelRegistry {
         self.providers.insert(name, Arc::new(provider));
     }
 
+    /// Register a cloud provider from a boxed trait object.
+    pub fn register_provider_boxed(&mut self, provider: Box<dyn Provider>) {
+        let name = provider.name().to_string();
+        if self.default_provider.is_none() {
+            self.default_provider = Some(name.clone());
+        }
+        self.providers.insert(name, Arc::from(provider));
+    }
+
     /// Register a local inference backend.
     pub fn register_backend(&mut self, backend: Box<dyn InferenceBackend>) {
         let name = backend.name().to_string();

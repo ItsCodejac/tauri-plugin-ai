@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde_json::json;
 use tokio::sync::mpsc;
 
-use crate::config::{CompletionRequest, CompletionResponse, StreamChunk, Usage};
+use crate::config::{
+    CompletionRequest, CompletionResponse, Content, ContentPart, StreamChunk, Usage,
+};
 use crate::error::{Error, Result};
 use crate::provider::Provider;
 
@@ -31,10 +35,37 @@ impl OllamaProvider {
             .messages
             .iter()
             .map(|m| {
-                json!({
+                let mut msg = json!({
                     "role": m.role,
-                    "content": m.content,
-                })
+                });
+                match &m.content {
+                    Content::Text(s) => {
+                        msg["content"] = json!(s);
+                    }
+                    Content::Parts(parts) => {
+                        // Ollama uses "content" for text and "images" for base64 images
+                        let text: String = parts
+                            .iter()
+                            .filter_map(|p| match p {
+                                ContentPart::Text { text } => Some(text.as_str()),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>()
+                            .join("");
+                        let images: Vec<&str> = parts
+                            .iter()
+                            .filter_map(|p| match p {
+                                ContentPart::Image { data, .. } => Some(data.as_str()),
+                                _ => None,
+                            })
+                            .collect();
+                        msg["content"] = json!(text);
+                        if !images.is_empty() {
+                            msg["images"] = json!(images);
+                        }
+                    }
+                }
+                msg
             })
             .collect();
 
@@ -70,12 +101,14 @@ impl Provider for OllamaProvider {
         request: CompletionRequest,
         _api_key: &str,
     ) -> Result<CompletionResponse> {
+        let timeout = Duration::from_secs(request.timeout_secs.unwrap_or(60) as u64);
         let body = self.build_body(&request, false);
 
         let resp = self
             .client
             .post(format!("{}/api/chat", self.api_base))
             .header("Content-Type", "application/json")
+            .timeout(timeout)
             .json(&body)
             .send()
             .await
@@ -128,12 +161,14 @@ impl Provider for OllamaProvider {
         _api_key: &str,
         sender: mpsc::Sender<StreamChunk>,
     ) -> Result<()> {
+        let timeout = Duration::from_secs(request.timeout_secs.unwrap_or(120) as u64);
         let body = self.build_body(&request, true);
 
         let resp = self
             .client
             .post(format!("{}/api/chat", self.api_base))
             .header("Content-Type", "application/json")
+            .timeout(timeout)
             .json(&body)
             .send()
             .await
@@ -189,13 +224,23 @@ impl Provider for OllamaProvider {
                         None
                     };
 
-                    let _ = sender
+                    if sender
                         .send(StreamChunk {
                             delta: content,
                             done,
                             usage,
+                            finish_reason: if done {
+                                Some("stop".to_string())
+                            } else {
+                                None
+                            },
                         })
-                        .await;
+                        .await
+                        .is_err()
+                    {
+                        // Receiver dropped (cancelled), stop streaming
+                        return Ok(());
+                    }
 
                     if done {
                         return Ok(());

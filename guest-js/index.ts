@@ -5,9 +5,27 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 // Types — mirror the Rust structs in config.rs / models.rs / streaming.rs
 // ---------------------------------------------------------------------------
 
+export type Role = 'system' | 'user' | 'assistant' | 'tool';
+
+export interface TextContentPart {
+  type: 'text';
+  text: string;
+}
+
+export interface ImageContentPart {
+  type: 'image';
+  data: string;       // base64 encoded
+  media_type: string;  // e.g. "image/png"
+}
+
+export type ContentPart = TextContentPart | ImageContentPart;
+
+/** Message content — either a plain string or structured multi-modal parts. */
+export type Content = string | ContentPart[];
+
 export interface Message {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: Role;
+  content: Content;
 }
 
 export interface CompletionRequest {
@@ -18,6 +36,8 @@ export interface CompletionRequest {
   temperature?: number;
   stream?: boolean;
   tools?: unknown[];
+  /** Request timeout in seconds. Defaults to 60 for complete, 120 for stream. */
+  timeout_secs?: number;
 }
 
 export interface CompletionResponse {
@@ -38,6 +58,7 @@ export interface StreamChunk {
   delta: string;
   done: boolean;
   usage?: Usage;
+  finish_reason?: string;
 }
 
 /** Wrapper emitted by the Rust side on the `ai:stream:chunk` event. */
@@ -89,7 +110,7 @@ export async function complete(request: CompletionRequest): Promise<CompletionRe
 export interface StreamCallbacks {
   onChunk: (chunk: StreamChunk) => void;
   onError?: (error: string) => void;
-  onComplete?: (usage?: Usage) => void;
+  onComplete?: (usage?: Usage, finishReason?: string) => void;
 }
 
 /**
@@ -119,7 +140,7 @@ export class AIStream {
       if (request_id !== this.requestId) return;
 
       if (chunk.done) {
-        callbacks.onComplete?.(chunk.usage);
+        callbacks.onComplete?.(chunk.usage, chunk.finish_reason);
         this.stop();
       } else {
         callbacks.onChunk(chunk);
@@ -135,7 +156,14 @@ export class AIStream {
     }
   }
 
+  /** Cancel the stream. Signals the Rust side to drop the sender, stopping the provider. */
   stop(): void {
+    if (this.requestId) {
+      // Fire-and-forget cancel on the Rust side
+      invoke('plugin:ai|cancel_stream', { requestId: this.requestId }).catch(() => {
+        // Ignore errors — stream may already be finished
+      });
+    }
     this.unlisten?.();
     this.unlisten = null;
     this.requestId = null;
@@ -161,13 +189,14 @@ export async function streamToString(
           parts.push(chunk.delta);
           onToken?.(chunk.delta);
         },
-        onComplete: (usage) => {
+        onComplete: (usage, finishReason) => {
           stream.stop();
           resolve({
             content: parts.join(''),
             model: request.model ?? 'unknown',
             provider: request.provider ?? 'default',
             usage,
+            finish_reason: finishReason,
           });
         },
         onError: (error) => {
@@ -227,10 +256,28 @@ export async function getProviders(): Promise<string[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Stream cancellation
+// ---------------------------------------------------------------------------
+
+/** Cancel an active streaming request by its request ID. */
+export async function cancelStream(requestId: string): Promise<void> {
+  return invoke('plugin:ai|cancel_stream', { requestId });
+}
+
+// ---------------------------------------------------------------------------
 // General inference (non-LLM models)
 // ---------------------------------------------------------------------------
 
-/** Tensor data for model input/output. */
+/**
+ * Tensor data for model input/output.
+ *
+ * TODO: The `data: number[]` encoding is slow for large tensors because JSON
+ * serialization of number arrays is expensive. A future improvement should add
+ * a `base64` field as an alternative encoding (base64-encoded raw bytes) for
+ * performance-critical use cases. The Rust side would decode base64 when present.
+ * Both options should be kept so users can choose: number[] for small/debug
+ * tensors, base64 for production performance.
+ */
 export interface TensorData {
   /** Shape (e.g. [1, 3, 224, 224]) */
   shape: number[];
@@ -286,7 +333,13 @@ export async function listBackends(): Promise<BackendInfo[]> {
 // Tensor helpers
 // ---------------------------------------------------------------------------
 
-/** Create a TensorData from a Float32Array. */
+/**
+ * Create a TensorData from a Float32Array.
+ *
+ * TODO: For large tensors, consider using `tensorFromFloat32Base64` (not yet
+ * implemented) which encodes as base64 instead of a JSON number array for
+ * significantly better serialization performance.
+ */
 export function tensorFromFloat32(data: Float32Array, shape: number[]): TensorData {
   // Use byteOffset and byteLength to correctly handle views into larger buffers
   const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -328,6 +381,9 @@ export const ai = {
   setApiKey,
   getApiKey,
   getProviders,
+
+  // Stream cancellation
+  cancelStream,
 
   // General inference (any model)
   infer,

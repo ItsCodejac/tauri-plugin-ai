@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use tauri::{command, AppHandle, Runtime};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 
 use crate::backend::{InferenceInput, InferenceOutput};
 use crate::config::{CompletionRequest, CompletionResponse, ModelConfig};
@@ -11,6 +13,10 @@ use crate::streaming::forward_stream_to_events;
 
 /// Monotonic counter for generating unique stream request IDs.
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Tracks active stream senders so they can be cancelled.
+/// Dropping the sender causes the provider's stream loop to get a send error and stop.
+pub struct ActiveStreams(pub Arc<Mutex<HashMap<String, mpsc::Sender<crate::config::StreamChunk>>>>);
 
 #[command]
 pub async fn complete(
@@ -31,6 +37,7 @@ pub async fn complete(
 pub async fn stream<R: Runtime>(
     app: AppHandle<R>,
     state: tauri::State<'_, AiState>,
+    active_streams: tauri::State<'_, ActiveStreams>,
     request: CompletionRequest,
 ) -> Result<String, Error> {
     let request_id = format!(
@@ -39,6 +46,13 @@ pub async fn stream<R: Runtime>(
     );
 
     let (sender, receiver) = mpsc::channel(64);
+
+    // Store the sender so it can be cancelled
+    {
+        let mut streams = active_streams.0.lock().await;
+        streams.insert(request_id.clone(), sender.clone());
+    }
+
     forward_stream_to_events(app, request_id.clone(), receiver);
 
     // Resolve provider + key under the lock, then release before streaming
@@ -48,9 +62,33 @@ pub async fn stream<R: Runtime>(
     };
     // Lock released here — other commands can proceed during the stream
 
-    provider.stream(request, &api_key, sender).await?;
+    let rid = request_id.clone();
+    let streams = Arc::clone(&active_streams.inner().0);
+
+    // Spawn the stream so we can return the request_id immediately
+    tauri::async_runtime::spawn(async move {
+        let _ = provider.stream(request, &api_key, sender).await;
+        // Clean up when stream finishes naturally
+        let mut s = streams.lock().await;
+        s.remove(&rid);
+    });
 
     Ok(request_id)
+}
+
+/// Cancel an active streaming request.
+///
+/// Dropping the sender causes the provider stream loop to receive a send error
+/// and stop, which cleans up the HTTP connection.
+#[command]
+pub async fn cancel_stream(
+    active_streams: tauri::State<'_, ActiveStreams>,
+    request_id: String,
+) -> Result<(), Error> {
+    let mut streams = active_streams.0.lock().await;
+    // Dropping the sender will cause the stream to stop
+    streams.remove(&request_id);
+    Ok(())
 }
 
 #[command]
