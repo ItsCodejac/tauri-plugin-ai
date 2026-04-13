@@ -1,0 +1,24 @@
+{
+  "name": "tauri-plugin-ai-api",
+  "version": "0.1.0",
+  "description": "TypeScript API for tauri-plugin-ai — AI integration for Tauri v2 apps",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@tauri-apps/api": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.10.0",
+    "typescript": "~5.7.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  }
+}

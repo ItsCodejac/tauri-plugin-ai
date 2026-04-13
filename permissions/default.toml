@@ -1,0 +1,49 @@
+"$schema" = "schemas/schema.json"
+
+[[permission]]
+identifier = "allow-complete"
+description = "Allow AI completion requests"
+commands.allow = ["complete"]
+
+[[permission]]
+identifier = "allow-stream"
+description = "Allow AI streaming requests"
+commands.allow = ["stream"]
+
+[[permission]]
+identifier = "allow-list-models"
+description = "Allow listing available models"
+commands.allow = ["list_models"]
+
+[[permission]]
+identifier = "allow-load-model"
+description = "Allow loading local models"
+commands.allow = ["load_model"]
+
+[[permission]]
+identifier = "allow-unload-model"
+description = "Allow unloading local models"
+commands.allow = ["unload_model"]
+
+[[permission]]
+identifier = "allow-set-api-key"
+description = "Allow setting API keys for providers"
+commands.allow = ["set_api_key"]
+
+[[permission]]
+identifier = "allow-get-providers"
+description = "Allow listing configured providers"
+commands.allow = ["get_providers"]
+
+[[set]]
+identifier = "default"
+description = "Default permissions for the AI plugin"
+permissions = [
+    "allow-complete",
+    "allow-stream",
+    "allow-list-models",
+    "allow-load-model",
+    "allow-unload-model",
+    "allow-set-api-key",
+    "allow-get-providers",
+]

@@ -1,0 +1,40 @@
+[package]
+name = "tauri-plugin-ai"
+version = "0.1.0"
+description = "AI integration for Tauri apps — cloud providers and local inference"
+authors = []
+license = "MIT"
+edition = "2021"
+rust-version = "1.77.2"
+links = "tauri-plugin-ai"
+
+[features]
+default = ["cloud"]
+cloud = ["reqwest"]
+local-onnx = ["ort"]
+local-llm = ["candle-core", "candle-nn", "candle-transformers"]
+
+[dependencies]
+tauri = "2"
+tauri-plugin = { version = "2", features = ["build"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+thiserror = "2"
+async-trait = "0.1"
+tokio = { version = "1", features = ["sync"] }
+futures-util = "0.3"
+
+# Cloud providers (behind "cloud" feature)
+reqwest = { version = "0.12", features = ["json", "stream"], optional = true }
+
+# ONNX Runtime (behind "local-onnx" feature)
+ort = { version = "2.0.0-rc.12", optional = true }
+
+# Candle for local LLM inference (behind "local-llm" feature)
+candle-core = { version = "0.10", optional = true }
+candle-nn = { version = "0.10", optional = true }
+candle-transformers = { version = "0.10", optional = true }
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
