@@ -78,6 +78,15 @@ pub async fn set_api_key(
 }
 
 #[command]
+pub async fn get_api_key(
+    state: tauri::State<'_, AiState>,
+    provider: String,
+) -> Result<Option<String>, Error> {
+    let registry = state.0.lock().await;
+    Ok(registry.get_api_key(&provider).cloned())
+}
+
+#[command]
 pub async fn get_providers(
     state: tauri::State<'_, AiState>,
 ) -> Result<Vec<String>, Error> {

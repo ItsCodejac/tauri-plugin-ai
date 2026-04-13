@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the complete command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_api_key command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-api-key",
+          "markdownDescription": "Enables the get_api_key command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_api_key command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-api-key",
+          "markdownDescription": "Denies the get_api_key command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_providers command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-providers",
@@ -403,10 +415,10 @@
           "markdownDescription": "Denies the unload_model command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`",
+          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`"
+          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`"
         },
         {
           "description": "Allow AI completion requests",
@@ -445,10 +457,28 @@
           "markdownDescription": "Allow setting API keys for providers"
         },
         {
+          "description": "Allow reading API keys for providers",
+          "type": "string",
+          "const": "allow-get-api-key",
+          "markdownDescription": "Allow reading API keys for providers"
+        },
+        {
           "description": "Allow listing configured providers",
           "type": "string",
           "const": "allow-get-providers",
           "markdownDescription": "Allow listing configured providers"
+        },
+        {
+          "description": "Allow running inference on loaded models",
+          "type": "string",
+          "const": "allow-infer",
+          "markdownDescription": "Allow running inference on loaded models"
+        },
+        {
+          "description": "Allow listing inference backends",
+          "type": "string",
+          "const": "allow-list-backends",
+          "markdownDescription": "Allow listing inference backends"
         }
       ]
     }

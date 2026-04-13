@@ -206,6 +206,16 @@ export async function setApiKey(provider: string, key: string): Promise<void> {
   return invoke('plugin:ai|set_api_key', { provider, key });
 }
 
+/**
+ * Get the current in-memory API key for a provider.
+ *
+ * Returns `null` if no key is set. Useful for checking whether
+ * a key has been loaded (e.g. from keyring) before making requests.
+ */
+export async function getApiKey(provider: string): Promise<string | null> {
+  return invoke<string | null>('plugin:ai|get_api_key', { provider });
+}
+
 // ---------------------------------------------------------------------------
 // Provider info
 // ---------------------------------------------------------------------------
@@ -313,6 +323,7 @@ export const ai = {
   loadModel,
   unloadModel,
   setApiKey,
+  getApiKey,
   getProviders,
 
   // General inference (any model)

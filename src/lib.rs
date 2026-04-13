@@ -1,4 +1,5 @@
 pub mod backend;
+pub mod backends;
 pub mod commands;
 pub mod config;
 pub mod error;
@@ -39,6 +40,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::load_model,
             commands::unload_model,
             commands::set_api_key,
+            commands::get_api_key,
             commands::get_providers,
             // General inference (non-LLM models)
             commands::infer,
@@ -57,6 +59,21 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 registry.register_provider(Box::new(AnthropicProvider::new(None)));
                 registry.register_provider(Box::new(OpenAiProvider::new(None)));
                 registry.register_provider(Box::new(OllamaProvider::new(None)));
+            }
+
+            // Register ONNX Runtime backend when the local-onnx feature is enabled
+            #[cfg(feature = "local-onnx")]
+            {
+                use backends::onnx::OnnxBackend;
+                match OnnxBackend::new() {
+                    Ok(backend) => {
+                        registry.register_backend(Box::new(backend));
+                        log::info!("ONNX Runtime backend registered");
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to initialize ONNX backend: {e}");
+                    }
+                }
             }
 
             app.manage(AiState(tokio::sync::Mutex::new(registry)));

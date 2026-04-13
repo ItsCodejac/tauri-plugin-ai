@@ -31,9 +31,24 @@ description = "Allow setting API keys for providers"
 commands.allow = ["set_api_key"]
 
 [[permission]]
+identifier = "allow-get-api-key"
+description = "Allow reading API keys for providers"
+commands.allow = ["get_api_key"]
+
+[[permission]]
 identifier = "allow-get-providers"
 description = "Allow listing configured providers"
 commands.allow = ["get_providers"]
+
+[[permission]]
+identifier = "allow-infer"
+description = "Allow running inference on loaded models"
+commands.allow = ["infer"]
+
+[[permission]]
+identifier = "allow-list-backends"
+description = "Allow listing inference backends"
+commands.allow = ["list_backends"]
 
 [[set]]
 identifier = "default"
@@ -45,5 +60,8 @@ permissions = [
     "allow-load-model",
     "allow-unload-model",
     "allow-set-api-key",
+    "allow-get-api-key",
     "allow-get-providers",
+    "allow-infer",
+    "allow-list-backends",
 ]
