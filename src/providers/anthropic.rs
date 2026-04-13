@@ -225,6 +225,7 @@ impl Provider for AnthropicProvider {
                                                 done: false,
                                                 usage: None,
                                                 finish_reason: None,
+                                                error: None,
                                             })
                                             .await
                                             .is_err()
@@ -257,6 +258,7 @@ impl Provider for AnthropicProvider {
                                             done: true,
                                             usage,
                                             finish_reason,
+                                            error: None,
                                         })
                                         .await;
                                 }

@@ -67,7 +67,18 @@ pub async fn stream<R: Runtime>(
 
     // Spawn the stream so we can return the request_id immediately
     tauri::async_runtime::spawn(async move {
-        let _ = provider.stream(request, &api_key, sender).await;
+        if let Err(e) = provider.stream(request, &api_key, sender.clone()).await {
+            // Send the error as a final chunk so the frontend receives it
+            let _ = sender
+                .send(crate::config::StreamChunk {
+                    delta: String::new(),
+                    done: true,
+                    usage: None,
+                    finish_reason: None,
+                    error: Some(e.to_string()),
+                })
+                .await;
+        }
         // Clean up when stream finishes naturally
         let mut s = streams.lock().await;
         s.remove(&rid);
@@ -124,8 +135,21 @@ pub async fn set_api_key(
     provider: String,
     key: String,
 ) -> Result<(), Error> {
+    if key.trim().is_empty() {
+        return Err(Error::Config("API key cannot be empty".into()));
+    }
     let mut registry = state.0.lock().await;
     registry.set_api_key(&provider, key);
+    Ok(())
+}
+
+#[command]
+pub async fn remove_api_key(
+    state: tauri::State<'_, AiState>,
+    provider: String,
+) -> Result<(), Error> {
+    let mut registry = state.0.lock().await;
+    registry.remove_api_key(&provider);
     Ok(())
 }
 

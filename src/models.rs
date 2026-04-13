@@ -65,6 +65,11 @@ impl ModelRegistry {
         self.api_keys.insert(provider.to_string(), key);
     }
 
+    /// Remove the API key for a provider.
+    pub fn remove_api_key(&mut self, provider: &str) {
+        self.api_keys.remove(provider);
+    }
+
     /// Get the API key for a provider.
     pub fn get_api_key(&self, provider: &str) -> Option<&String> {
         self.api_keys.get(provider)

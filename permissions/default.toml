@@ -36,9 +36,19 @@ description = "Allow reading API keys for providers"
 commands.allow = ["get_api_key"]
 
 [[permission]]
+identifier = "allow-cancel-stream"
+description = "Allow cancelling active streaming requests"
+commands.allow = ["cancel_stream"]
+
+[[permission]]
 identifier = "allow-get-providers"
 description = "Allow listing configured providers"
 commands.allow = ["get_providers"]
+
+[[permission]]
+identifier = "allow-remove-api-key"
+description = "Allow removing API keys for providers"
+commands.allow = ["remove_api_key"]
 
 [[permission]]
 identifier = "allow-infer"
@@ -56,10 +66,12 @@ description = "Default permissions for the AI plugin"
 permissions = [
     "allow-complete",
     "allow-stream",
+    "allow-cancel-stream",
     "allow-list-models",
     "allow-load-model",
     "allow-unload-model",
     "allow-set-api-key",
+    "allow-remove-api-key",
     # "allow-get-api-key" is intentionally excluded from the default set
     # because it exposes secrets. Opt in explicitly if needed.
     "allow-get-providers",

@@ -54,7 +54,7 @@ Add to `src-tauri/capabilities/default.json`:
 }
 ```
 
-The `ai:default` permission grants access to all commands. You can also grant individual permissions: `ai:allow-complete`, `ai:allow-stream`, `ai:allow-infer`, `ai:allow-list-backends`, `ai:allow-get-api-key`, etc.
+The `ai:default` permission grants access to most commands. You can also grant individual permissions for fine-grained control. See the permissions table below for which are included by default.
 
 ## Quick Start: Cloud Completion
 
@@ -208,7 +208,9 @@ This separation keeps the AI plugin lightweight and avoids a hard dependency on 
 | `complete(req)`    | Non-streaming LLM completion                   |
 | `AIStream`         | Streaming completion manager (event-based)     |
 | `streamToString()` | Stream and collect full response as string     |
+| `cancelStream()`   | Cancel an active streaming request             |
 | `setApiKey()`      | Set API key in memory for a provider           |
+| `removeApiKey()`   | Remove the in-memory API key for a provider    |
 | `getApiKey()`      | Get current in-memory API key for a provider   |
 | `getProviders()`   | List registered provider names                 |
 | `listModels()`     | List available models across all providers     |
@@ -227,20 +229,20 @@ This separation keeps the AI plugin lightweight and avoids a hard dependency on 
 
 ## Permissions
 
-All permissions included in `ai:default`:
-
-| Permission              | Command        |
-| ----------------------- | -------------- |
-| `allow-complete`        | `complete`     |
-| `allow-stream`          | `stream`       |
-| `allow-list-models`     | `list_models`  |
-| `allow-load-model`      | `load_model`   |
-| `allow-unload-model`    | `unload_model` |
-| `allow-set-api-key`     | `set_api_key`  |
-| `allow-get-api-key`     | `get_api_key`  |
-| `allow-get-providers`   | `get_providers`|
-| `allow-infer`           | `infer`        |
-| `allow-list-backends`   | `list_backends`|
+| Permission              | Command          | In `ai:default`? |
+| ----------------------- | ---------------- | ---------------- |
+| `allow-complete`        | `complete`       | Yes              |
+| `allow-stream`          | `stream`         | Yes              |
+| `allow-cancel-stream`   | `cancel_stream`  | Yes              |
+| `allow-list-models`     | `list_models`    | Yes              |
+| `allow-load-model`      | `load_model`     | Yes              |
+| `allow-unload-model`    | `unload_model`   | Yes              |
+| `allow-set-api-key`     | `set_api_key`    | Yes              |
+| `allow-remove-api-key`  | `remove_api_key` | Yes              |
+| `allow-get-api-key`     | `get_api_key`    | **No** (exposes secrets) |
+| `allow-get-providers`   | `get_providers`  | Yes              |
+| `allow-infer`           | `infer`          | Yes              |
+| `allow-list-backends`   | `list_backends`  | Yes              |
 
 ## License
 

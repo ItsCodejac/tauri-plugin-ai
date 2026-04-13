@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "TypeScript API for tauri-plugin-ai — AI integration for Tauri v2 apps",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "license": "MIT",
   "files": [

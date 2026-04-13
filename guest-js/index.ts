@@ -59,6 +59,8 @@ export interface StreamChunk {
   done: boolean;
   usage?: Usage;
   finish_reason?: string;
+  /** If the stream encountered an error, this will contain the error message. */
+  error?: string;
 }
 
 /** Wrapper emitted by the Rust side on the `ai:stream:chunk` event. */
@@ -139,7 +141,10 @@ export class AIStream {
       const { request_id, chunk } = event.payload;
       if (request_id !== this.requestId) return;
 
-      if (chunk.done) {
+      if (chunk.error) {
+        callbacks.onError?.(chunk.error);
+        this.stop();
+      } else if (chunk.done) {
         callbacks.onComplete?.(chunk.usage, chunk.finish_reason);
         this.stop();
       } else {
@@ -244,6 +249,11 @@ export async function setApiKey(provider: string, key: string): Promise<void> {
  */
 export async function getApiKey(provider: string): Promise<string | null> {
   return invoke<string | null>('plugin:ai|get_api_key', { provider });
+}
+
+/** Remove the in-memory API key for a provider. */
+export async function removeApiKey(provider: string): Promise<void> {
+  return invoke('plugin:ai|remove_api_key', { provider });
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +389,7 @@ export const ai = {
   loadModel,
   unloadModel,
   setApiKey,
+  removeApiKey,
   getApiKey,
   getProviders,
 

@@ -118,6 +118,7 @@ impl AiPluginBuilder {
                 commands::load_model,
                 commands::unload_model,
                 commands::set_api_key,
+                commands::remove_api_key,
                 commands::get_api_key,
                 commands::get_providers,
                 // General inference (non-LLM models)

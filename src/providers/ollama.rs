@@ -234,6 +234,7 @@ impl Provider for OllamaProvider {
                             } else {
                                 None
                             },
+                            error: None,
                         })
                         .await
                         .is_err()

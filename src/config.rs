@@ -13,7 +13,8 @@ pub struct ModelConfig {
     pub provider: String,
     pub model_id: String,
     pub model_path: Option<String>,
-    pub options: serde_json::Value,
+    #[serde(default)]
+    pub options: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,4 +106,7 @@ pub struct StreamChunk {
     pub done: bool,
     pub usage: Option<Usage>,
     pub finish_reason: Option<String>,
+    /// If the stream encountered an error, this will contain the error message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }

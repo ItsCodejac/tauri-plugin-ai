@@ -295,6 +295,18 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the cancel_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-cancel-stream",
+          "markdownDescription": "Enables the cancel_stream command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the cancel_stream command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-cancel-stream",
+          "markdownDescription": "Denies the cancel_stream command without any pre-configured scope."
+        },
+        {
           "description": "Enables the complete command without any pre-configured scope.",
           "type": "string",
           "const": "allow-complete",
@@ -379,6 +391,18 @@
           "markdownDescription": "Denies the load_model command without any pre-configured scope."
         },
         {
+          "description": "Enables the remove_api_key command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-remove-api-key",
+          "markdownDescription": "Enables the remove_api_key command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_api_key command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-remove-api-key",
+          "markdownDescription": "Denies the remove_api_key command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_api_key command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-api-key",
@@ -415,10 +439,10 @@
           "markdownDescription": "Denies the unload_model command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`",
+          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-cancel-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-remove-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`"
+          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-cancel-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-remove-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`"
         },
         {
           "description": "Allow AI completion requests",
@@ -463,10 +487,22 @@
           "markdownDescription": "Allow reading API keys for providers"
         },
         {
+          "description": "Allow cancelling active streaming requests",
+          "type": "string",
+          "const": "allow-cancel-stream",
+          "markdownDescription": "Allow cancelling active streaming requests"
+        },
+        {
           "description": "Allow listing configured providers",
           "type": "string",
           "const": "allow-get-providers",
           "markdownDescription": "Allow listing configured providers"
+        },
+        {
+          "description": "Allow removing API keys for providers",
+          "type": "string",
+          "const": "allow-remove-api-key",
+          "markdownDescription": "Allow removing API keys for providers"
         },
         {
           "description": "Allow running inference on loaded models",

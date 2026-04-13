@@ -212,6 +212,7 @@ impl Provider for OpenAiProvider {
                                     done: true,
                                     usage: None,
                                     finish_reason: pending_finish_reason.take(),
+                                    error: None,
                                 })
                                 .await;
                             return Ok(());
@@ -243,6 +244,7 @@ impl Provider for OpenAiProvider {
                                         done: false,
                                         usage: None,
                                         finish_reason: None,
+                                        error: None,
                                     })
                                     .await
                                     .is_err()
