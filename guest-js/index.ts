@@ -112,24 +112,25 @@ export class AIStream {
   private requestId: string | null = null;
 
   async start(request: CompletionRequest, callbacks: StreamCallbacks): Promise<void> {
-    // Invoke the command first to get the request_id, then listen for events
-    // filtered to that id.
+    // Listen FIRST so no events are missed between invoke resolving and
+    // the listener being established.
+    this.unlisten = await listen<StreamEvent>('ai:stream:chunk', (event) => {
+      const { request_id, chunk } = event.payload;
+      if (request_id !== this.requestId) return;
+
+      if (chunk.done) {
+        callbacks.onComplete?.(chunk.usage);
+        this.stop();
+      } else {
+        callbacks.onChunk(chunk);
+      }
+    });
+
     try {
-      const requestId = await invoke<string>('plugin:ai|stream', { request });
-      this.requestId = requestId;
-
-      this.unlisten = await listen<StreamEvent>('ai:stream:chunk', (event) => {
-        const { request_id, chunk } = event.payload;
-        if (request_id !== this.requestId) return;
-
-        if (chunk.done) {
-          callbacks.onComplete?.(chunk.usage);
-          this.stop();
-        } else {
-          callbacks.onChunk(chunk);
-        }
-      });
+      // THEN start the stream — events will be caught by the listener above
+      this.requestId = await invoke<string>('plugin:ai|stream', { request });
     } catch (e) {
+      this.stop();
       callbacks.onError?.(String(e));
     }
   }
@@ -287,10 +288,12 @@ export async function listBackends(): Promise<BackendInfo[]> {
 
 /** Create a TensorData from a Float32Array. */
 export function tensorFromFloat32(data: Float32Array, shape: number[]): TensorData {
+  // Use byteOffset and byteLength to correctly handle views into larger buffers
+  const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   return {
     shape,
     dtype: 'f32',
-    data: Array.from(new Uint8Array(data.buffer)),
+    data: Array.from(bytes),
   };
 }
 

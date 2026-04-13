@@ -207,13 +207,9 @@ impl Provider for OllamaProvider {
         Ok(())
     }
 
+    /// Ollama models are dynamic — they depend on what's pulled locally.
+    /// Use the Ollama `/api/tags` endpoint to discover available models at runtime.
     fn available_models(&self) -> Vec<String> {
-        vec![
-            "llama3.2".to_string(),
-            "llama3.1".to_string(),
-            "mistral".to_string(),
-            "codellama".to_string(),
-            "gemma2".to_string(),
-        ]
+        Vec::new()
     }
 }

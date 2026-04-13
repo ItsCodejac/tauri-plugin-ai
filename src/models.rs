@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use serde::Serialize;
 
@@ -19,7 +20,7 @@ pub struct ModelInfo {
 /// Central registry that tracks providers, backends, API keys,
 /// and routes requests to the right destination.
 pub struct ModelRegistry {
-    providers: HashMap<String, Box<dyn Provider>>,
+    providers: HashMap<String, Arc<dyn Provider>>,
     backends: HashMap<String, Box<dyn InferenceBackend>>,
     api_keys: HashMap<String, String>,
     default_provider: Option<String>,
@@ -36,12 +37,12 @@ impl ModelRegistry {
     }
 
     /// Register a cloud provider.
-    pub fn register_provider(&mut self, provider: Box<dyn Provider>) {
+    pub fn register_provider(&mut self, provider: impl Provider + 'static) {
         let name = provider.name().to_string();
         if self.default_provider.is_none() {
             self.default_provider = Some(name.clone());
         }
-        self.providers.insert(name, provider);
+        self.providers.insert(name, Arc::new(provider));
     }
 
     /// Register a local inference backend.
@@ -83,30 +84,79 @@ impl ModelRegistry {
         self.providers.keys().cloned().collect()
     }
 
-    /// Resolve which provider to use for a request.
-    fn resolve_provider(&self, name: Option<&str>) -> Result<&dyn Provider> {
+    /// Resolve which provider to use for a request (returns an Arc clone).
+    fn resolve_provider(&self, name: Option<&str>) -> Result<Arc<dyn Provider>> {
         let provider_name = name
             .or(self.default_provider.as_deref())
             .ok_or_else(|| Error::Config("No provider specified and no default set".into()))?;
 
         self.providers
             .get(provider_name)
-            .map(|p| p.as_ref())
+            .cloned()
             .ok_or_else(|| Error::Config(format!("Provider '{}' not registered", provider_name)))
     }
 
+    /// Resolve the provider and its API key in one step.
+    ///
+    /// Returns an `Arc<dyn Provider>` and the API key so the caller can
+    /// release the registry lock before making HTTP calls.
+    pub fn resolve_provider_and_key(
+        &self,
+        name: Option<&str>,
+    ) -> Result<(Arc<dyn Provider>, String)> {
+        let provider = self.resolve_provider(name)?;
+        let api_key = self
+            .api_keys
+            .get(provider.name())
+            .ok_or_else(|| {
+                Error::Config(format!(
+                    "No API key set for provider '{}'. Call set_api_key first.",
+                    provider.name()
+                ))
+            })?
+            .clone();
+        Ok((provider, api_key))
+    }
+
+    /// Resolve the provider and its API key, allowing an empty key for
+    /// providers that don't require one (e.g. Ollama).
+    pub fn resolve_provider_and_optional_key(
+        &self,
+        name: Option<&str>,
+    ) -> Result<(Arc<dyn Provider>, String)> {
+        let provider = self.resolve_provider(name)?;
+        let api_key = self
+            .api_keys
+            .get(provider.name())
+            .cloned()
+            .unwrap_or_default();
+        Ok((provider, api_key))
+    }
+
     /// Perform a non-streaming completion.
+    ///
+    /// NOTE: Prefer calling `resolve_provider_and_key` from the command layer
+    /// and releasing the lock before the HTTP call. This method is kept for
+    /// convenience in non-concurrent contexts.
     pub async fn complete(&self, request: CompletionRequest) -> Result<CompletionResponse> {
         let provider = self.resolve_provider(request.provider.as_deref())?;
         let api_key = self
             .api_keys
             .get(provider.name())
-            .map(|s| s.as_str())
-            .unwrap_or("");
+            .ok_or_else(|| {
+                Error::Config(format!(
+                    "No API key set for provider '{}'. Call set_api_key first.",
+                    provider.name()
+                ))
+            })?;
         provider.complete(request, api_key).await
     }
 
     /// Perform a streaming completion.
+    ///
+    /// NOTE: Prefer calling `resolve_provider_and_key` from the command layer
+    /// and releasing the lock before the HTTP call. This method is kept for
+    /// convenience in non-concurrent contexts.
     pub async fn stream(
         &self,
         request: CompletionRequest,
@@ -116,8 +166,12 @@ impl ModelRegistry {
         let api_key = self
             .api_keys
             .get(provider.name())
-            .map(|s| s.as_str())
-            .unwrap_or("");
+            .ok_or_else(|| {
+                Error::Config(format!(
+                    "No API key set for provider '{}'. Call set_api_key first.",
+                    provider.name()
+                ))
+            })?;
         provider.stream(request, api_key, sender).await
     }
 
@@ -157,15 +211,22 @@ impl ModelRegistry {
     }
 
     /// List all backends and their loaded models.
-    pub fn list_backends(&self) -> Vec<crate::commands::BackendInfo> {
+    pub fn list_backends(&self) -> Vec<BackendInfo> {
         self.backends
             .iter()
-            .map(|(name, backend)| crate::commands::BackendInfo {
+            .map(|(name, backend)| BackendInfo {
                 name: name.clone(),
                 loaded_models: backend.loaded_models(),
             })
             .collect()
     }
+}
+
+/// Info about a registered inference backend and its loaded models.
+#[derive(Debug, Clone, Serialize)]
+pub struct BackendInfo {
+    pub name: String,
+    pub loaded_models: Vec<String>,
 }
 
 /// Thread-safe wrapper for the model registry, stored as Tauri managed state.

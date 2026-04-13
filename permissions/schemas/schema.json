@@ -415,10 +415,10 @@
           "markdownDescription": "Denies the unload_model command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`",
+          "description": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`"
+          "markdownDescription": "Default permissions for the AI plugin\n#### This permission set includes:\n\n- `allow-complete`\n- `allow-stream`\n- `allow-list-models`\n- `allow-load-model`\n- `allow-unload-model`\n- `allow-set-api-key`\n- `allow-get-providers`\n- `allow-infer`\n- `allow-list-backends`"
         },
         {
           "description": "Allow AI completion requests",

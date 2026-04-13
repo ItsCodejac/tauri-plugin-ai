@@ -1,19 +1,30 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use tauri::{command, AppHandle, Runtime};
 use tokio::sync::mpsc;
 
 use crate::backend::{InferenceInput, InferenceOutput};
 use crate::config::{CompletionRequest, CompletionResponse, ModelConfig};
 use crate::error::Error;
-use crate::models::{AiState, ModelInfo};
+use crate::models::{AiState, BackendInfo, ModelInfo};
 use crate::streaming::forward_stream_to_events;
+
+/// Monotonic counter for generating unique stream request IDs.
+static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[command]
 pub async fn complete(
     state: tauri::State<'_, AiState>,
     request: CompletionRequest,
 ) -> Result<CompletionResponse, Error> {
-    let registry = state.0.lock().await;
-    registry.complete(request).await
+    // Resolve provider + key under the lock, then release before HTTP call
+    let (provider, api_key) = {
+        let registry = state.0.lock().await;
+        registry.resolve_provider_and_optional_key(request.provider.as_deref())?
+    };
+    // Lock released here — other commands can proceed
+
+    provider.complete(request, &api_key).await
 }
 
 #[command]
@@ -23,18 +34,21 @@ pub async fn stream<R: Runtime>(
     request: CompletionRequest,
 ) -> Result<String, Error> {
     let request_id = format!(
-        "{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis()
+        "ai-stream-{}",
+        REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
     );
 
     let (sender, receiver) = mpsc::channel(64);
     forward_stream_to_events(app, request_id.clone(), receiver);
 
-    let registry = state.0.lock().await;
-    registry.stream(request, sender).await?;
+    // Resolve provider + key under the lock, then release before streaming
+    let (provider, api_key) = {
+        let registry = state.0.lock().await;
+        registry.resolve_provider_and_optional_key(request.provider.as_deref())?
+    };
+    // Lock released here — other commands can proceed during the stream
+
+    provider.stream(request, &api_key, sender).await?;
 
     Ok(request_id)
 }
@@ -117,10 +131,4 @@ pub async fn list_backends(
 ) -> Result<Vec<BackendInfo>, Error> {
     let registry = state.0.lock().await;
     Ok(registry.list_backends())
-}
-
-#[derive(serde::Serialize)]
-pub struct BackendInfo {
-    pub name: String,
-    pub loaded_models: Vec<String>,
 }

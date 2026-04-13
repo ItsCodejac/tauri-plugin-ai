@@ -56,9 +56,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 use providers::ollama::OllamaProvider;
                 use providers::openai::OpenAiProvider;
 
-                registry.register_provider(Box::new(AnthropicProvider::new(None)));
-                registry.register_provider(Box::new(OpenAiProvider::new(None)));
-                registry.register_provider(Box::new(OllamaProvider::new(None)));
+                registry.register_provider(AnthropicProvider::new(None));
+                registry.register_provider(OpenAiProvider::new(None));
+                registry.register_provider(OllamaProvider::new(None));
             }
 
             // Register ONNX Runtime backend when the local-onnx feature is enabled

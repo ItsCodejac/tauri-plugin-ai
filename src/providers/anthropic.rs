@@ -171,17 +171,8 @@ impl Provider for AnthropicProvider {
 
                 for line in event_block.lines() {
                     if let Some(data) = line.strip_prefix("data: ") {
-                        if data == "[DONE]" {
-                            let _ = sender
-                                .send(StreamChunk {
-                                    delta: String::new(),
-                                    done: true,
-                                    usage: None,
-                                })
-                                .await;
-                            return Ok(());
-                        }
-
+                        // Anthropic does not use "[DONE]" — stream end is
+                        // signalled by a `message_delta` event with `stop_reason`.
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data) {
                             let event_type = parsed["type"].as_str().unwrap_or("");
 

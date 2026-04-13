@@ -12,7 +12,7 @@ links = "tauri-plugin-ai"
 default = ["cloud"]
 cloud = ["reqwest"]
 local-onnx = ["ort"]
-local-llm = ["candle-core", "candle-nn", "candle-transformers"]
+# local-llm: planned for future release
 
 [dependencies]
 tauri = "2"
@@ -31,10 +31,6 @@ reqwest = { version = "0.12", features = ["json", "stream"], optional = true }
 # ONNX Runtime (behind "local-onnx" feature)
 ort = { version = "2.0.0-rc.12", optional = true }
 
-# Candle for local LLM inference (behind "local-llm" feature)
-candle-core = { version = "0.10", optional = true }
-candle-nn = { version = "0.10", optional = true }
-candle-transformers = { version = "0.10", optional = true }
 
 [build-dependencies]
 tauri-plugin = { version = "2", features = ["build"] }

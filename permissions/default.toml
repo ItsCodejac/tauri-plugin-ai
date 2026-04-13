@@ -60,7 +60,8 @@ permissions = [
     "allow-load-model",
     "allow-unload-model",
     "allow-set-api-key",
-    "allow-get-api-key",
+    # "allow-get-api-key" is intentionally excluded from the default set
+    # because it exposes secrets. Opt in explicitly if needed.
     "allow-get-providers",
     "allow-infer",
     "allow-list-backends",
