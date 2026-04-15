@@ -371,7 +371,13 @@ export function tensorFromUint8(data: Uint8Array, shape: number[]): TensorData {
 
 /** Extract a Float32Array from a TensorData output. */
 export function tensorToFloat32(tensor: TensorData): Float32Array {
-  return new Float32Array(new Uint8Array(tensor.data).buffer);
+  const bytes = new Uint8Array(tensor.data);
+  if (bytes.byteLength % 4 !== 0) {
+    throw new Error(
+      `Cannot convert tensor to Float32Array: data length (${bytes.byteLength} bytes) is not a multiple of 4`
+    );
+  }
+  return new Float32Array(bytes.buffer);
 }
 
 // ---------------------------------------------------------------------------

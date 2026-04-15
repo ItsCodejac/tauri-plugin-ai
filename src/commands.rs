@@ -75,19 +75,38 @@ pub async fn stream<R: Runtime>(
 
     // Spawn the stream so we can return the request_id immediately
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = provider.stream(request, &api_key, sender.clone()).await {
-            // Send the error as a final chunk so the frontend receives it
-            let _ = sender
-                .send(crate::config::StreamChunk {
-                    delta: String::new(),
-                    done: true,
-                    usage: None,
-                    finish_reason: None,
-                    error: Some(e.to_string()),
-                })
-                .await;
+        let result = provider.stream(request, &api_key, sender.clone()).await;
+
+        match result {
+            Err(e) => {
+                // Send the error as a final chunk so the frontend receives it
+                let _ = sender
+                    .send(crate::config::StreamChunk {
+                        delta: String::new(),
+                        done: true,
+                        usage: None,
+                        finish_reason: None,
+                        error: Some(e.to_string()),
+                    })
+                    .await;
+            }
+            Ok(()) => {
+                // Ensure a done chunk is always sent even if the provider didn't.
+                // This handles edge cases like non-JSON API responses where the
+                // provider's SSE parser silently skips all lines and returns Ok.
+                let _ = sender
+                    .send(crate::config::StreamChunk {
+                        delta: String::new(),
+                        done: true,
+                        usage: None,
+                        finish_reason: Some("stop".into()),
+                        error: None,
+                    })
+                    .await;
+            }
         }
-        // Clean up when stream finishes naturally
+
+        // Clean up
         let mut s = streams.lock().await;
         s.remove(&rid);
     });
