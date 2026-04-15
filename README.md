@@ -4,7 +4,7 @@ AI integration plugin for Tauri v2 apps. Provides a unified interface for cloud 
 
 > **Status:** Alpha. The API is not yet stable and will change.
 
-> **Starting a new app?** Check out [TASK (Tauri App Starter Kit)](https://github.com/youruser/tauri-app-starter-kit) — a complete desktop app skeleton with menus, settings, crash recovery, and more. This plugin integrates with TASK out of the box.
+> **Starting a new app?** Check out [TASK (Tauri App Starter Kit)](https://github.com/ItsCodejac/tauri-app-starter-kit) — a complete desktop app skeleton with menus, settings, crash recovery, and more. This plugin integrates with TASK out of the box.
 
 ## Two APIs
 
