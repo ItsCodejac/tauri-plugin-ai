@@ -193,6 +193,10 @@ await setApiKey('anthropic', apiKey);
 
 This separation keeps the AI plugin lightweight and avoids a hard dependency on any particular keychain implementation.
 
+### Security: Proxy Pattern
+
+API keys should stay in the Rust backend. The renderer calls `complete` or `stream`, and Rust reads the key internally -- the key never crosses the IPC boundary. The `get_api_key` command is intentionally **excluded** from `ai:default` permissions because it exposes raw keys to the renderer. Only add `allow-get-api-key` to your capabilities if the renderer absolutely needs the raw key value.
+
 ## Feature Flags
 
 | Feature      | Default | Description                                        |

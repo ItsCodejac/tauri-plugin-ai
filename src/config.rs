@@ -7,17 +7,18 @@ pub struct ProviderConfig {
     pub default_model: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct ModelConfig {
     pub name: String,
     pub provider: String,
     pub model_id: String,
     pub model_path: Option<String>,
-    #[serde(default)]
     pub options: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct CompletionRequest {
     pub provider: Option<String>,
     pub model: Option<String>,
@@ -31,10 +32,11 @@ pub struct CompletionRequest {
 }
 
 /// Message role — validated at the type level.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     System,
+    #[default]
     User,
     Assistant,
     Tool,
@@ -46,6 +48,12 @@ pub enum Role {
 pub enum Content {
     Text(String),
     Parts(Vec<ContentPart>),
+}
+
+impl Default for Content {
+    fn default() -> Self {
+        Content::Text(String::new())
+    }
 }
 
 impl Content {
@@ -78,13 +86,15 @@ pub enum ContentPart {
     Image { data: String, media_type: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Message {
     pub role: Role,
     pub content: Content,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct CompletionResponse {
     pub content: String,
     pub model: String,
@@ -93,14 +103,16 @@ pub struct CompletionResponse {
     pub finish_reason: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Usage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
     pub total_tokens: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct StreamChunk {
     pub delta: String,
     pub done: bool,

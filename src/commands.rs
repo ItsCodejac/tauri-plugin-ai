@@ -23,6 +23,10 @@ pub async fn complete(
     state: tauri::State<'_, AiState>,
     request: CompletionRequest,
 ) -> Result<CompletionResponse, Error> {
+    if request.messages.is_empty() {
+        return Err(Error::Config("messages array cannot be empty".into()));
+    }
+
     // Resolve provider + key under the lock, then release before HTTP call
     let (provider, api_key) = {
         let registry = state.0.lock().await;
@@ -40,6 +44,10 @@ pub async fn stream<R: Runtime>(
     active_streams: tauri::State<'_, ActiveStreams>,
     request: CompletionRequest,
 ) -> Result<String, Error> {
+    if request.messages.is_empty() {
+        return Err(Error::Config("messages array cannot be empty".into()));
+    }
+
     let request_id = format!(
         "ai-stream-{}",
         REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
@@ -153,6 +161,11 @@ pub async fn remove_api_key(
     Ok(())
 }
 
+/// WARNING: This command exposes API keys to the renderer process.
+/// It is intentionally excluded from default permissions.
+/// Prefer the proxy pattern: have the renderer call `complete` or `stream`,
+/// and Rust reads the key internally -- the key never leaves the backend.
+/// Only enable this if the renderer absolutely needs the raw key value.
 #[command]
 pub async fn get_api_key(
     state: tauri::State<'_, AiState>,

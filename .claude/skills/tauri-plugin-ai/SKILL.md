@@ -108,6 +108,10 @@ const logits = tensorToFloat32(output.tensors['logits']);
 await unloadModel('onnx', 'my-model');
 ```
 
+## Security: Proxy Pattern
+
+API keys should stay in the Rust backend. The renderer calls `complete` or `stream`, and Rust reads the key internally -- the key never crosses the IPC boundary. The `getApiKey` command is intentionally excluded from `ai:default` permissions because it exposes raw keys to the renderer. Only enable `allow-get-api-key` if the renderer absolutely needs the raw key value.
+
 ## API Key Management
 
 Keys are in-memory only (no persistence by default). For persistent keys, use tauri-plugin-keyring alongside:
